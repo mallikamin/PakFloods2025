@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pakistan Floods 2025 - Interactive Map</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .toggle-btn, .download-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .toggle-btn.active {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(238, 90, 82, 0.4);
+        }
+        
+        .toggle-btn:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .download-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .toggle-btn:hover, .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .map-container {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .pakistan-map-svg {
+            width: 100%;
+            max-width: 1000px;
+            height: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .province-path {
+            stroke: rgba(255, 255, 255, 0.6);
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        
+        .province-path:hover {
+            stroke: rgba(255, 255, 255, 1);
+            stroke-width: 3;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+            transform: scale(1.02);
+            transform-origin: center;
+        }
+        
+        /* Deaths view colors */
+        .deaths-view .very-high { fill: url(#deathsVeryHigh); }
+        .deaths-view .high { fill: url(#deathsHigh); }
+        .deaths-view .medium { fill: url(#deathsMedium); }
+        .deaths-view .low { fill: url(#deathsLow); }
+        
+        /* Destruction view colors */
+        .destruction-view .very-high { fill: url(#destructionVeryHigh); }
+        .destruction-view .high { fill: url(#destructionHigh); }
+        .destruction-view .medium { fill: url(#destructionMedium); }
+        .destruction-view .low { fill: url(#destructionLow); }
+        
+        .province-label {
+            fill: white;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            text-anchor: middle;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+            user-select: none;
+        }
+        
+        .province-data {
+            fill: rgba(255, 255, 255, 0.9);
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 400;
+            font-size: 10px;
+            text-anchor: middle;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+            user-select: none;
+        }
+        
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+        
+        .legend h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .legend-color {
+            width: 25px;
+            height: 15px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .stats-panel {
+            position: fixed;
+            top: 50%;
+            left: -400px;
+            transform: translateY(-50%);
+            width: 350px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: left 0.4s ease;
+            z-index: 100;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .stats-panel.show {
+            left: 0;
+        }
+        
+        .stats-panel h2 {
+            margin: 0 0 20px 0;
+            color: #ff6b6b;
+            font-size: 1.5em;
+        }
+        
+        .stat-item {
+            margin: 15px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .summary-cards {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 20px;
+            flex-wrap: wrap;
+        }
+        
+        .summary-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 150px;
+        }
+        
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+            color: #ff6b6b;
+        }
+        
+        .summary-card p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .download-info {
+            text-align: center;
+            margin: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .legend { position: relative; margin: 20px auto; }
+            .stats-panel { width: 90vw; left: -90vw; }
+            .stats-panel.show { left: 0; }
+            .controls { margin: 10px; }
+            .toggle-btn, .download-btn { padding: 10px 20px; font-size: 14px; }
+            .province-label { font-size: 10px; }
+            .province-data { font-size: 8px; }
+        }
+        
+        /* Hidden canvas for map download */
+        #downloadCanvas {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌊 Pakistan Floods 2025</h1>
+        <p>Interactive Province-wise Impact Analysis</p>
+    </div>
+    
+    <div class="summary-cards">
+        <div class="summary-card">
+            <h3>650+</h3>
+            <p>Total Deaths</p>
+        </div>
+        <div class="summary-card">
+            <h3>880+</h3>
+            <p>Total Injuries</p>
+        </div>
+        <div class="summary-card">
+            <h3>4</h3>
+            <p>Provinces Affected</p>
+        </div>
+        <div class="summary-card">
+            <h3>1,300+</h3>
+            <p>People Evacuated</p>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="toggle-btn active" onclick="showDeaths()">💀 Deaths & Casualties</button>
+        <button class="toggle-btn" onclick="showDestruction()">🏠 Infrastructure Damage</button>
+        <button class="download-btn" onclick="downloadMap()">📥 Download Map as PNG</button>
+    </div>
+    
+    <div class="download-info">
+        <p>💡 <strong>How to download:</strong> Click the "Download Map as PNG" button above to save the current map view as a high-resolution PNG file suitable for reports and presentations.</p>
+    </div>
+    
+    <div class="map-container">
+        <svg class="pakistan-map-svg deaths-view" id="pakistanMapSVG" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+            <!-- Gradient definitions -->
+            <defs>
+                <!-- Deaths gradients -->
+                <linearGradient id="deathsVeryHigh" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#8B0000"/>
+                    <stop offset="100%" style="stop-color:#DC143C"/>
+                </linearGradient>
+                <linearGradient id="deathsHigh" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FF4500"/>
+                    <stop offset="100%" style="stop-color:#FF6347"/>
+                </linearGradient>
+                <linearGradient id="deathsMedium" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FF8C00"/>
+                    <stop offset="100%" style="stop-color:#FFD700"/>
+                </linearGradient>
+                <linearGradient id="deathsLow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#32CD32"/>
+                    <stop offset="100%" style="stop-color:#90EE90"/>
+                </linearGradient>
+                
+                <!-- Destruction gradients -->
+                <linearGradient id="destructionVeryHigh" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#4B0082"/>
+                    <stop offset="100%" style="stop-color:#8A2BE2"/>
+                </linearGradient>
+                <linearGradient id="destructionHigh" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FF1493"/>
+                    <stop offset="100%" style="stop-color:#FF69B4"/>
+                </linearGradient>
+                <linearGradient id="destructionMedium" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1E90FF"/>
+                    <stop offset="100%" style="stop-color:#87CEEB"/>
+                </linearGradient>
+                <linearGradient id="destructionLow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#20B2AA"/>
+                    <stop offset="100%" style="stop-color:#98FB98"/>
+                </linearGradient>
+            </defs>
+            
+            <!-- Background -->
+            <rect width="800" height="600" fill="url(#backgroundGradient)"/>
+            <defs>
+                <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1e3c72"/>
+                    <stop offset="100%" style="stop-color:#2a5298"/>
+                </linearGradient>
+            </defs>
+            
+            <!-- Title -->
+            <text x="400" y="40" text-anchor="middle" fill="white" font-size="24" font-weight="bold" font-family="Arial">
+                Pakistan Floods 2025 - Province Impact Map
+            </text>
+            
+            <!-- Balochistan -->
+            <path class="province-path low" data-province="balochistan" onclick="showStats('balochistan')"
+                  d="M50,200 L50,450 L280,480 L320,420 L350,380 L320,320 L280,280 L250,240 L200,220 L150,200 Z"/>
+            
+            <!-- Sindh -->
+            <path class="province-path medium" data-province="sindh" onclick="showStats('sindh')"
+                  d="M280,480 L280,380 L380,360 L420,380 L450,420 L430,460 L400,480 L350,490 Z"/>
+            
+            <!-- Punjab -->
+            <path class="province-path high" data-province="punjab" onclick="showStats('punjab')"
+                  d="M320,320 L350,280 L420,260 L480,280 L520,320 L500,360 L450,380 L420,380 L380,360 L350,340 Z"/>
+            
+            <!-- Khyber Pakhtunkhwa -->
+            <path class="province-path very-high" data-province="kpk" onclick="showStats('kpk')"
+                  d="M200,80 L280,60 L350,80 L420,100 L450,140 L480,180 L500,220 L480,260 L420,260 L350,280 L320,320 L280,280 L250,240 L220,200 L200,160 L180,120 Z"/>
+            
+            <!-- Gilgit-Baltistan -->
+            <path class="province-path low" data-province="gilgit" onclick="showStats('gilgit')"
+                  d="M350,80 L420,60 L480,50 L520,60 L550,80 L560,120 L540,140 L520,160 L500,180 L480,180 L450,140 L420,100 Z"/>
+            
+            <!-- Azad Kashmir -->
+            <path class="province-path low" data-province="ajk" onclick="showStats('ajk')"
+                  d="M500,220 L530,200 L550,220 L560,240 L550,260 L530,280 L520,320 L500,300 L480,280 L480,260 Z"/>
+            
+            <!-- Islamabad (small circle) -->
+            <circle class="province-path medium" data-province="islamabad" onclick="showStats('islamabad')"
+                    cx="480" cy="240" r="15"/>
+            
+            <!-- Province labels -->
+            <text class="province-label" x="180" y="340">BALOCHISTAN</text>
+            <text class="province-data" x="180" y="355" id="balochistan-label">4+ Deaths</text>
+            
+            <text class="province-label" x="360" y="430">SINDH</text>
+            <text class="province-data" x="360" y="445" id="sindh-label">7+ Deaths</text>
+            
+            <text class="province-label" x="420" y="320">PUNJAB</text>
+            <text class="province-data" x="420" y="335" id="punjab-label">123+ Deaths</text>
+            
+            <text class="province-label" x="300" y="170">KHYBER</text>
+            <text class="province-label" x="300" y="185">PAKHTUNKHWA</text>
+            <text class="province-data" x="300" y="200" id="kpk-label">323+ Deaths</text>
+            
+            <text class="province-label" x="480" y="115">GILGIT-</text>
+            <text class="province-label" x="480" y="130">BALTISTAN</text>
+            <text class="province-data" x="480" y="145" id="gilgit-label">Minimal</text>
+            
+            <text class="province-label" x="530" y="250">AJK</text>
+            <text class="province-data" x="530" y="265" id="ajk-label">Minimal</text>
+            
+            <text class="province-label" x="480" y="225">ICT</text>
+            <text class="province-data" x="480" y="260" id="islamabad-label">Alert</text>
+            
+            <!-- Legend embedded in SVG -->
+            <g id="mapLegend">
+                <rect x="600" y="80" width="180" height="200" fill="rgba(0,0,0,0.8)" rx="10" stroke="rgba(255,255,255,0.3)"/>
+                <text x="690" y="105" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Impact Level</text>
+                
+                <!-- Very High -->
+                <rect x="615" y="120" width="20" height="12" fill="url(#deathsVeryHigh)" stroke="rgba(255,255,255,0.3)"/>
+                <text x="645" y="130" fill="white" font-size="11">Very High (300+)</text>
+                
+                <!-- High -->
+                <rect x="615" y="145" width="20" height="12" fill="url(#deathsHigh)" stroke="rgba(255,255,255,0.3)"/>
+                <text x="645" y="155" fill="white" font-size="11">High (100-300)</text>
+                
+                <!-- Medium -->
+                <rect x="615" y="170" width="20" height="12" fill="url(#deathsMedium)" stroke="rgba(255,255,255,0.3)"/>
+                <text x="645" y="180" fill="white" font-size="11">Medium (10-100)</text>
+                
+                <!-- Low -->
+                <rect x="615" y="195" width="20" height="12" fill="url(#deathsLow)" stroke="rgba(255,255,255,0.3)"/>
+                <text x="645" y="205" fill="white" font-size="11">Low (0-10)</text>
+                
+                <!-- Data source -->
+                <text x="690" y="235" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">Data: Aug 2025</text>
+                <text x="690" y="250" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">Total: 650+ Deaths</text>
+            </g>
+        </svg>
+        
+        <div class="legend" id="legend">
+            <h3>Deaths Impact Level</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(45deg, #8B0000, #DC143C);"></div>
+                <span>Very High (300+)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(45deg, #FF4500, #FF6347);"></div>
+                <span>High (100-300)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(45deg, #FF8C00, #FFD700);"></div>
+                <span>Medium (10-100)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(45deg, #32CD32, #90EE90);"></div>
+                <span>Low (0-10)</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats-panel" id="statsPanel">
+        <button class="close-btn" onclick="hideStats()">✕</button>
+        <h2 id="statsTitle">Province Details</h2>
+        <div id="statsContent"></div>
+    </div>
+    
+    <!-- Hidden canvas for download -->
+    <canvas id="downloadCanvas"></canvas>
+
+    <script>
+        let currentView = 'deaths';
+        
+        const provinceData = {
+            balochistan: {
+                name: 'Balochistan Province',
+                deaths: '4+ (early data)',
+                injuries: 'Minimal reported',
+                infrastructure: 'Limited damage reported',
+                evacuation: 'Some displacement',
+                emergency: 'Low alert status',
+                keyAreas: ['Quetta vicinity', 'Northern districts'],
+                severity: 'low',
+                area: '347,190 km² (largest province)',
+                population: '12.3 million',
+                floodRisk: 'Historically moderate flood risk'
+            },
+            sindh: {
+                name: 'Sindh Province',
+                deaths: '7+ (early data)',
+                injuries: 'Limited reporting',
+                infrastructure: 'Historically most affected (70% damages in 2022)',
+                evacuation: 'Precautionary measures',
+                emergency: 'Monitoring ongoing',
+                keyAreas: ['Coastal regions', 'Karachi suburbs'],
+                severity: 'medium',
+                area: '140,914 km²',
+                population: '47.9 million',
+                floodRisk: 'Very high - most vulnerable province'
+            },
+            punjab: {
+                name: 'Punjab Province',
+                deaths: '123+ (second highest)',
+                injuries: '290+ (in 24 hours alone)',
+                infrastructure: '120+ homes damaged, 6 livestock killed',
+                evacuation: 'Thousands displaced',
+                emergency: 'Section 144 imposed province-wide',
+                keyAreas: ['Chakwal (400mm rain in 10hrs)', 'Rawalpindi (flood alert)'],
+                severity: 'high',
+                area: '205,344 km²',
+                population: '110 million (most populous)',
+                floodRisk: 'High during monsoon season'
+            },
+            kpk: {
+                name: 'Khyber Pakhtunkhwa',
+                deaths: '323+ (highest casualties)',
+                injuries: '150+ in Chositi village alone',
+                infrastructure: 'Severe damage, military helicopter crash during rescue',
+                evacuation: '1,300 tourists evacuated from Mansehra district',
+                emergency: 'National mourning declared, state of emergency',
+                keyAreas: ['Buner District', 'Mansehra', 'Bajaur', 'Chositi village'],
+                severity: 'very-high',
+                area: '101,741 km²',
+                population: '35.5 million',
+                floodRisk: 'Extreme - flash floods from Swat River'
+            },
+            gilgit: {
+                name: 'Gilgit-Baltistan',
+                deaths: 'No major casualties reported',
+                injuries: 'None reported',
+                infrastructure: 'Minimal impact, tourism areas monitored',
+                evacuation: 'Precautionary measures only',
+                emergency: 'Normal operational status',
+                keyAreas: ['Mountain regions', 'Tourist destinations', 'K2 base camp routes'],
+                severity: 'low',
+                area: '72,971 km²',
+                population: '1.8 million',
+                floodRisk: 'Low - mountainous terrain, glacial melt concerns'
+            },
+            ajk: {
+                name: 'Azad Jammu & Kashmir',
+                deaths: 'No major casualties',
+                injuries: 'None reported',
+                infrastructure: 'Limited impact',
+                evacuation: 'None required',
+                emergency: 'Normal status',
+                keyAreas: ['Muzaffarabad', 'Border regions with India'],
+                severity: 'low',
+                area: '13,297 km²',
+                population: '4.0 million',
+                floodRisk: 'Moderate - river systems'
+            },
+            islamabad: {
+                name: 'Islamabad Capital Territory',
+                deaths: 'No casualties reported',
+                injuries: 'None reported',
+                infrastructure: 'Federal coordination hub, NDMA headquarters',
+                evacuation: 'Not required',
+                emergency: 'Federal disaster response coordination center',
+                keyAreas: ['NDMA headquarters', 'Federal response coordination', 'Diplomatic area'],
+                severity: 'medium',
+                area: '906 km² (smallest)',
+                population: '2.0 million',
+                floodRisk: 'Low - planned city with drainage'
+            }
+        };
+        
+        function showDeaths() {
+            currentView = 'deaths';
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const map = document.querySelector('.pakistan-map-svg');
+            map.className = 'pakistan-map-svg deaths-view';
+            
+            // Update labels
+            document.getElementById('balochistan-label').textContent = '4+ Deaths';
+            document.getElementById('sindh-label').textContent = '7+ Deaths';
+            document.getElementById('punjab-label').textContent = '123+ Deaths';
+            document.getElementById('kpk-label').textContent = '323+ Deaths';
+            document.getElementById('gilgit-label').textContent = 'Minimal';
+            document.getElementById('ajk-label').textContent = 'Minimal';
+            document.getElementById('islamabad-label').textContent = 'Alert';
+            
+            updateLegend('deaths');
+        }
+        
+        function showDestruction() {
+            currentView = 'destruction';
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const map = document.querySelector('.pakistan-map-svg');
+            map.className = 'pakistan-map-svg destruction-view';
+            
+            // Update labels
+            document.getElementById('balochistan-label').textContent = 'Limited';
+            document.getElementById('sindh-label').textContent = 'Historic Risk';
+            document.getElementById('punjab-label').textContent = '120+ Homes';
+            document.getElementById('kpk-label').textContent = 'Severe Damage';
+            document.getElementById('gilgit-label').textContent = 'Minimal';
+            document.getElementById('ajk-label').textContent = 'Minimal';
+            document.getElementById('islamabad-label').textContent = 'Coordination';
+            
+            updateLegend('destruction');
+            updateMapLegend('destruction');
+        }
+        
+        function updateLegend(view) {
+            const legend = document.getElementById('legend');
+            if (view === 'deaths') {
+                legend.innerHTML = `
+                    <h3>Deaths Impact Level</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #8B0000, #DC143C);"></div>
+                        <span>Very High (300+)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #FF4500, #FF6347);"></div>
+                        <span>High (100-300)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #FF8C00, #FFD700);"></div>
+                        <span>Medium (10-100)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #32CD32, #90EE90);"></div>
+                        <span>Low (0-10)</span>
+                    </div>
+                `;
+            } else {
+                legend.innerHTML = `
+                    <h3>Infrastructure Damage</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #4B0082, #8A2BE2);"></div>
+                        <span>Severe Damage</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #FF1493, #FF69B4);"></div>
+                        <span>High (100+ homes)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #1E90FF, #87CEEB);"></div>
+                        <span>Moderate Impact</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #20B2AA, #98FB98);"></div>
+                        <span>Minimal Damage</span>
+                    </div>
+                `;
+            }
+        }
+
+        function updateMapLegend(view) {
+            const mapLegend = document.getElementById('mapLegend');
+            if (view === 'destruction') {
+                mapLegend.innerHTML = `
+                    <rect x="600" y="80" width="180" height="200" fill="rgba(0,0,0,0.8)" rx="10" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="690" y="105" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Infrastructure Impact</text>
+                    
+                    <rect x="615" y="120" width="20" height="12" fill="url(#destructionVeryHigh)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="130" fill="white" font-size="11">Severe Damage</text>
+                    
+                    <rect x="615" y="145" width="20" height="12" fill="url(#destructionHigh)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="155" fill="white" font-size="11">High (100+ homes)</text>
+                    
+                    <rect x="615" y="170" width="20" height="12" fill="url(#destructionMedium)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="180" fill="white" font-size="11">Moderate Impact</text>
+                    
+                    <rect x="615" y="195" width="20" height="12" fill="url(#destructionLow)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="205" fill="white" font-size="11">Minimal Damage</text>
+                    
+                    <text x="690" y="235" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">Infrastructure Data</text>
+                    <text x="690" y="250" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">120+ Homes Destroyed</text>
+                `;
+            } else {
+                mapLegend.innerHTML = `
+                    <rect x="600" y="80" width="180" height="200" fill="rgba(0,0,0,0.8)" rx="10" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="690" y="105" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Impact Level</text>
+                    
+                    <rect x="615" y="120" width="20" height="12" fill="url(#deathsVeryHigh)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="130" fill="white" font-size="11">Very High (300+)</text>
+                    
+                    <rect x="615" y="145" width="20" height="12" fill="url(#deathsHigh)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="155" fill="white" font-size="11">High (100-300)</text>
+                    
+                    <rect x="615" y="170" width="20" height="12" fill="url(#deathsMedium)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="180" fill="white" font-size="11">Medium (10-100)</text>
+                    
+                    <rect x="615" y="195" width="20" height="12" fill="url(#deathsLow)" stroke="rgba(255,255,255,0.3)"/>
+                    <text x="645" y="205" fill="white" font-size="11">Low (0-10)</text>
+                    
+                    <text x="690" y="235" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">Data: Aug 2025</text>
+                    <text x="690" y="250" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="9">Total: 650+ Deaths</text>
+                `;
+            }
+        }
+        
+        function showStats(province) {
+            const data = provinceData[province];
+            const panel = document.getElementById('statsPanel');
+            const title = document.getElementById('statsTitle');
+            const content = document.getElementById('statsContent');
+            
+            title.textContent = data.name;
+            content.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">Deaths</div>
+                    <div class="stat-value">${data.deaths}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Injuries</div>
+                    <div class="stat-value">${data.injuries}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Infrastructure Impact</div>
+                    <div class="stat-value">${data.infrastructure}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Evacuation Status</div>
+                    <div class="stat-value">${data.evacuation}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Emergency Measures</div>
+                    <div class="stat-value">${data.emergency}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Key Affected Areas</div>
+                    <div class="stat-value">${data.keyAreas.join(', ')}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Province Area</div>
+                    <div class="stat-value">${data.area}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Population</div>
+                    <div class="stat-value">${data.population}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Flood Risk Assessment</div>
+                    <div class="stat-value">${data.floodRisk}</div>
+                </div>
+            `;
+            
+            panel.classList.add('show');
+        }
+        
+        function hideStats() {
+            document.getElementById('statsPanel').classList.remove('show');
+        }
+        
+        // Download Map Function
+        function downloadMap() {
+            const svg = document.getElementById('pakistanMapSVG');
+            const canvas = document.getElementById('downloadCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set high resolution
+            canvas.width = 1600;  // 2x resolution for better quality
+            canvas.height = 1200;
+            
+            // Create image from SVG
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+            
+            const img = new Image();
+            img.onload = function() {
+                // Clear canvas with white background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw the SVG image
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // Add timestamp
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.font = '20px Arial';
+                ctx.fillText(`Generated: ${new Date().toLocaleDateString()} - Pakistan Floods 2025`, 20, canvas.height - 20);
+                
+                // Create download link
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `Pakistan_Floods_2025_Map_${currentView.charAt(0).toUpperCase() + currentView.slice(1)}_${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+                    
+                    // Cleanup
+                    URL.revokeObjectURL(url);
+                    URL.revokeObjectURL(svgUrl);
+                }, 'image/png', 1.0);
+            };
+            
+            img.src = svgUrl;
+        }
+        
+        // Initialize with deaths view
+        showDeaths();
+        
+        // Add hover effects
+        document.querySelectorAll('.province-path').forEach(path => {
+            path.addEventListener('mouseenter', function() {
+                this.style.transformOrigin = 'center';
+                this.style.transform = 'scale(1.02)';
+                this.style.filter = 'drop-shadow(0 8px 16px rgba(0,0,0,0.6)) brightness(1.1)';
+            });
+            
+            path.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+                this.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))';
+            });
+        });
+
+        // Fix the showDestruction function reference
+        const originalShowDestruction = showDestruction;
+        showDestruction = function() {
+            currentView = 'destruction';
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const map = document.querySelector('.pakistan-map-svg');
+            map.className = 'pakistan-map-svg destruction-view';
+            
+            // Update labels
+            document.getElementById('balochistan-label').textContent = 'Limited';
+            document.getElementById('sindh-label').textContent = 'Historic Risk';
+            document.getElementById('punjab-label').textContent = '120+ Homes';
+            document.getElementById('kpk-label').textContent = 'Severe Damage';
+            document.getElementById('gilgit-label').textContent = 'Minimal';
+            document.getElementById('ajk-label').textContent = 'Minimal';
+            document.getElementById('islamabad-label').textContent = 'Coordination';
+            
+            updateLegend('destruction');
+            updateMapLegend('destruction');
+        };
+    </script>
+</body>
+</html>
