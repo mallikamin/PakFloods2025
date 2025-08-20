@@ -651,22 +651,55 @@
                 saveBtn.innerHTML = '⏳ Capturing...';
                 saveBtn.disabled = true;
 
+                // Hide stats panel if visible to avoid capturing it
+                const statsPanel = document.getElementById('statsPanel');
+                const wasPanelVisible = statsPanel.classList.contains('show');
+                if (wasPanelVisible) {
+                    statsPanel.classList.remove('show');
+                    // Wait for panel to hide
+                    await new Promise(resolve => setTimeout(resolve, 400));
+                }
+
                 // Configure html2canvas options for better quality
                 const canvas = await html2canvas(captureArea, {
                     backgroundColor: '#1e3c72',
                     scale: 2, // Higher resolution
                     useCORS: true,
-                    allowTaint: true,
-                    imageTimeout: 0,
-                    removeContainer: false,
+                    allowTaint: false,
+                    logging: false,
                     width: captureArea.offsetWidth,
-                    height: captureArea.offsetHeight
+                    height: captureArea.offsetHeight,
+                    onclone: function(clonedDoc) {
+                        // Ensure the cloned document has the correct styles
+                        const style = clonedDoc.createElement('style');
+                        style.textContent = `
+                            body { 
+                                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                            }
+                            .capture-area {
+                                background: rgba(255, 255, 255, 0.1) !important;
+                                border-radius: 20px !important;
+                                backdrop-filter: blur(10px) !important;
+                                border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+                            }
+                        `;
+                        clonedDoc.head.appendChild(style);
+                    }
                 });
+
+                // Restore panel if it was visible
+                if (wasPanelVisible) {
+                    statsPanel.classList.add('show');
+                }
 
                 // Create download link
                 const link = document.createElement('a');
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-                const filename = `Pakistan_Floods_2025_${currentView}_${timestamp}.png`;
+                const viewName = currentView === 'deaths' ? 'Deaths' : 'Destruction';
+                const filename = `Pakistan_Floods_2025_${viewName}_${timestamp}.png`;
                 
                 link.download = filename;
                 link.href = canvas.toDataURL('image/png', 1.0);
@@ -725,3 +758,47 @@
                 <div class="stat-item">
                     <div class="stat-label">Evacuation Status</div>
                     <div class="stat-value">${data.evacuation}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Emergency Status</div>
+                    <div class="stat-value">${data.emergency}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Key Affected Areas</div>
+                    <div class="stat-value">${data.keyAreas.join(', ')}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Area</div>
+                    <div class="stat-value">${data.area}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Population</div>
+                    <div class="stat-value">${data.population}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Historical Flood Risk</div>
+                    <div class="stat-value">${data.floodRisk}</div>
+                </div>
+            `;
+            
+            panel.classList.add('show');
+        }
+        
+        function hideStats() {
+            document.getElementById('statsPanel').classList.remove('show');
+        }
+        
+        function addPulseAnimation() {
+            const kpkPath = document.querySelector('[data-province="kpk"]');
+            if (kpkPath) {
+                kpkPath.style.animation = 'pulse 2s infinite';
+            }
+        }
+        
+        // Initialize the map with pulse animation
+        window.onload = function() {
+            setTimeout(addPulseAnimation, 500);
+        };
+    </script>
+</body>
+</html>
